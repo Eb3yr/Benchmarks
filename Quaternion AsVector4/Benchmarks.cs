@@ -103,6 +103,15 @@ namespace Quaternion_AsVector4
 		}
 
 		[Benchmark]
+		public unsafe void UnsafeReadUnalignedVoidPtr()
+		{
+			for (int i = 0; i < 1_000; i++)
+			{
+				v4 = Unsafe.ReadUnaligned<Vector4>(Unsafe.AsPointer(ref q));
+			}
+		}
+
+		[Benchmark]
 		public unsafe void UnsafeRead()
 		{
 			for (int i = 0; i < 1_000; i++)
