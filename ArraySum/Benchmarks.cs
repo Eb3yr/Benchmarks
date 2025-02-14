@@ -1,6 +1,7 @@
 ﻿using BenchmarkDotNet.Attributes;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -16,8 +17,15 @@ namespace ArraySum
 		public Benchmarks()
 		{
 			vals = Enumerable.Range(0, 10_000).Select(x => 0.5f * x * x).ToArray();
-			if (SumIntrinsics() != SumIntrinsicsPinned())
-				throw new Exception("Stinky");
+			if (SumIntrinsics() != SumIntrinsicsPinned() || SumFor() != SumIntrinsics())
+			{
+				Console.WriteLine($"For: {SumFor()}");
+				Console.WriteLine($"LINQ: {SumLinq()}");
+				Console.WriteLine($"Vector: {SumVector()}");
+				Console.WriteLine($"Intrinsics: {SumIntrinsics()}");
+				Console.WriteLine($"Intrinsics pinned: {SumIntrinsicsPinned()}");
+				Console.WriteLine($"Mismatch between expected and vectorised values, by {100f * (SumFor() - SumIntrinsics()) / SumFor()}%");
+			}
 		}
 
 		[Benchmark]
