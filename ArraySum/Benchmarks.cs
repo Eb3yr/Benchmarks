@@ -7,6 +7,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
+using System.Numerics.Tensors;
 
 namespace ArraySum
 {
@@ -14,40 +15,38 @@ namespace ArraySum
 	public class Benchmarks
 	{
 		float[] vals;
+
+		[Params(8, 128, 4096, 65536, 1048576)]
+		public int Length;
+
 		public Benchmarks()
 		{
-			vals = Enumerable.Range(0, 10_000).Select(x => 0.5f * x * x).ToArray();
-			if (SumIntrinsics() != SumIntrinsicsPinned() || SumFor() != SumIntrinsics())
-			{
-				Console.WriteLine($"For: {SumFor()}");
-				Console.WriteLine($"LINQ: {SumLinq()}");
-				Console.WriteLine($"Vector: {SumVector()}");
-				Console.WriteLine($"Intrinsics: {SumIntrinsics()}");
-				Console.WriteLine($"Intrinsics pinned: {SumIntrinsicsPinned()}");
-				Console.WriteLine($"Mismatch between expected and vectorised values, by {100f * (SumFor() - SumIntrinsics()) / SumFor()}%");
-			}
+			vals = new float[Length];
+			Random rng = new(0);
+			for (int i = 0; i < vals.Length; i++)
+				vals[i] = rng.NextSingle();
 		}
 
-		[Benchmark]
+		[Benchmark(Baseline = true)]
 		public float SumFor()
 		{
 			float sum = 0;
 			for (int i = 0; i < vals.Length; i++)
 				sum += vals[i];
-
+		
 			return sum;
 		}
-
+		
 		[Benchmark]
 		public float SumLinq()
 		{
 			return vals.Sum();
 		}
 
-		[Benchmark(Baseline = true)]
+		[Benchmark]
 		public float SumVector()
 		{
-			Span<float> vals = this.vals.AsSpan();
+			ReadOnlySpan<float> vals = new(this.vals);
 			float sum = 0;
 			int i = 0;
 			while (i < vals.Length - Vector<float>.Count)
@@ -65,7 +64,7 @@ namespace ArraySum
 		[Benchmark]
 		public unsafe float SumIntrinsics()
 		{
-			Span<float> vals = this.vals.AsSpan();
+			ReadOnlySpan<float> vals = new(this.vals);
 			float sum = 0;
 			int i = 0;
 			while (i < vals.Length - Vector256<float>.Count)
@@ -84,7 +83,7 @@ namespace ArraySum
 		[Benchmark]
 		public unsafe float SumIntrinsicsPinned()
 		{
-			Span<float> vals = this.vals.AsSpan();
+			ReadOnlySpan<float> vals = new(this.vals);
 			float sum = 0;
 
 			int i = 0;
@@ -102,6 +101,21 @@ namespace ArraySum
 			sum += Vector256.Sum(Vector256.LoadUnsafe(ref MemoryMarshal.GetReference(final)));
 
 			return sum;
+		}
+
+		[Benchmark]
+		public float SumTensorPrimitives()
+		{
+			ReadOnlySpan<float> vals = new(this.vals);
+			return TensorPrimitives.Sum(vals);
+		}
+
+		[Benchmark]
+		public float SumTensor()
+		{
+#pragma warning disable SYSLIB5001
+			ReadOnlyTensorSpan<float> vals = new(this.vals);
+			return Tensor.Sum(vals);
 		}
 	}
 }
