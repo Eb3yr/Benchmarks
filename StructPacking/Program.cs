@@ -9,9 +9,7 @@ namespace StructPacking
         public static void Main(string[] args)
         {
             var config = DefaultConfig.Instance;
-            var summaryRead = BenchmarkRunner.Run<ReadBench>(config, args);
-            Task.Delay(15_000).Wait();
-            var summaryWrite = BenchmarkRunner.Run<WriteBench>(config, args);
+            var summaryRead = BenchmarkRunner.Run<Benchmark>(config, args);
             // Use this to select benchmarks from the console:
             // var summaries = BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args, config);
         }

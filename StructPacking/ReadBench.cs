@@ -5,8 +5,7 @@ using BenchmarkDotNet.Order;
 
 namespace StructPacking
 {
-	[MemoryDiagnoser(true)]
-	public class ReadBench
+	public partial class Benchmark
     {
 		Ordered ordered;
 		OrderedPackOne orderedPack1;

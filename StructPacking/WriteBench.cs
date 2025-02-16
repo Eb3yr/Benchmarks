@@ -9,14 +9,9 @@ using System.Threading.Tasks;
 namespace StructPacking
 {
 	[MemoryDiagnoser(true)]
-	public class WriteBench
+	public partial class Benchmark
 	{
-		Ordered ordered;
-		OrderedPackOne orderedPack1;
-		Jumbled jumbled;
-		JumbledPackOne jumbledPack1;
-
-		[Benchmark(Baseline = true)]
+		[Benchmark]
 		public void WriteOrdered()
 		{
 			for (int i = 0; i < 1_000; i++)
