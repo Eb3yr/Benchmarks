@@ -16,10 +16,11 @@ namespace ArraySum
 	{
 		float[] vals;
 
-		[Params(8, 128, 4096, 65536, 1048576)]
+		[Params(8, 128, 4096, 65536/*, 1048576*/)]
 		public int Length;
 
-		public Benchmarks()
+		[GlobalSetup]
+		public void GlobalSetup()
 		{
 			vals = new float[Length];
 			Random rng = new(0);
@@ -37,11 +38,11 @@ namespace ArraySum
 			return sum;
 		}
 		
-		[Benchmark]
-		public float SumLinq()
-		{
-			return vals.Sum();
-		}
+		//[Benchmark]
+		//public float SumLinq()	// Slower than SumFor()
+		//{
+		//	return vals.Sum();
+		//}
 
 		[Benchmark]
 		public float SumVector()
@@ -62,26 +63,7 @@ namespace ArraySum
 		}
 
 		[Benchmark]
-		public unsafe float SumIntrinsics()
-		{
-			ReadOnlySpan<float> vals = new(this.vals);
-			float sum = 0;
-			int i = 0;
-			while (i < vals.Length - Vector256<float>.Count)
-			{
-				sum += Vector256.Sum(Vector256.LoadUnsafe(ref MemoryMarshal.GetReference(vals.Slice(i, Vector256<float>.Count))));
-				i += Vector256<float>.Count;
-			}
-
-			Span<float> final = stackalloc float[Vector256<float>.Count];
-			vals.Slice(i).CopyTo(final);
-			sum += Vector256.Sum(Vector256.LoadUnsafe(ref MemoryMarshal.GetReference(final)));
-
-			return sum;
-		}
-
-		[Benchmark]
-		public unsafe float SumIntrinsicsPinned()
+		public unsafe float SumVector256()
 		{
 			ReadOnlySpan<float> vals = new(this.vals);
 			float sum = 0;
