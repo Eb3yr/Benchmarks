@@ -28,7 +28,7 @@ namespace ArraySum
 				vals[i] = rng.NextSingle();
 		}
 
-		[Benchmark(Baseline = true)]
+		[Benchmark]
 		public float SumFor()
 		{
 			float sum = 0;
@@ -44,7 +44,7 @@ namespace ArraySum
 		//	return vals.Sum();
 		//}
 
-		[Benchmark]
+		[Benchmark(Baseline = true)]
 		public float SumVector()
 		{
 			ReadOnlySpan<float> vals = new(this.vals);
@@ -55,9 +55,9 @@ namespace ArraySum
 				sum += Vector.Sum(new Vector<float>(vals.Slice(i, Vector<float>.Count)));
 				i += Vector<float>.Count;
 			}
-			Span<float> final = stackalloc float[Vector<float>.Count];
-			vals.Slice(i).CopyTo(final);
-			sum += Vector.Sum(new Vector<float>(final));
+
+			foreach (float f in vals.Slice(i))
+				sum += f;
 
 			return sum;
 		}
@@ -78,9 +78,8 @@ namespace ArraySum
 				}
 			}
 
-			Span<float> final = stackalloc float[Vector256<float>.Count];
-			vals.Slice(i).CopyTo(final);
-			sum += Vector256.Sum(Vector256.LoadUnsafe(ref MemoryMarshal.GetReference(final)));
+			foreach (float f in vals.Slice(i))
+				sum += f;
 
 			return sum;
 		}
