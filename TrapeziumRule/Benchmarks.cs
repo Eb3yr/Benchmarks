@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Numerics.Tensors;
+using System.Collections.Generic;
 
 namespace TrapeziumRule
 {
@@ -45,6 +46,31 @@ namespace TrapeziumRule
 				result += (y[i + 1] + y[i]) * (x[i + 1] - x[i]);
 		
 			return half * result;
+		}
+
+		[Benchmark]
+		public T TrapzEnumerable()
+		{
+			// Emulate taking in IEnumerable<T> arguments
+			IEnumerable<T> _x = x;
+			IEnumerable<T> _y = y;
+
+			T result = T.Zero;
+
+			var xEnum = _x.GetEnumerator();
+			var yEnum = _y.GetEnumerator();
+			xEnum.MoveNext();
+			yEnum.MoveNext();
+			T xPrev = xEnum.Current;
+			T yPrev = yEnum.Current;
+
+			while (xEnum.MoveNext() && yEnum.MoveNext())
+			{
+				result += (yEnum.Current + yPrev) * (xEnum.Current - xPrev);
+				xPrev = xEnum.Current;
+				yPrev = yEnum.Current;
+			}
+			return result / (T.One + T.One);
 		}
 		
 		[Benchmark]
@@ -175,15 +201,15 @@ namespace TrapeziumRule
 			return result / Two;
 		}
 
-		[Benchmark]
-		public T TrapzOptimal()
-		{
-			const int threshold = 2048;
-		
-			if (Length < threshold)
-				return TrapzVectors();
-		
-			return TrapzTensorPrimitivesSlidingWindow();
-		}
+		//[Benchmark]
+		//public T TrapzOptimal()
+		//{
+		//	const int threshold = 2560;
+		//
+		//	if (Length < threshold)
+		//		return TrapzVectors();
+		//
+		//	return TrapzTensorPrimitivesSlidingWindow();
+		//}
 	}
 }
