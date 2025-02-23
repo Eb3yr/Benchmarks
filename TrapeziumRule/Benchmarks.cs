@@ -17,7 +17,7 @@ namespace TrapeziumRule
 		static readonly T Two = T.One + T.One;
 		static readonly T half = T.One / Two;
 
-		[Params(23, 135, 1023, 2051, 65533, 1_000_003)]	// Non-powers of 4, prevent optimal case for vectors
+		[Params(23, 135, 517, 1023, 2051, 65533, 1_000_003)]	// Non-powers of 4, prevent optimal case for vectors
 		public int Length;
 
 		private static T F(T x) => x * x + T.One;
@@ -113,10 +113,8 @@ namespace TrapeziumRule
 			Span<T> _x = x;
 			Span<T> _y = y;
 
-			_x.Slice(1).CopyTo(xDiff);
-			_y.Slice(1).CopyTo(dest);
-			TensorPrimitives.Subtract(xDiff, _x.Slice(0, _x.Length - 1), xDiff);
-			TensorPrimitives.Subtract(dest, _y.Slice(0, _x.Length - 1), dest);
+			TensorPrimitives.Subtract(_x.Slice(1), _x.Slice(0, _x.Length - 1), xDiff);
+			TensorPrimitives.Subtract(_y.Slice(1), _y.Slice(0, _x.Length - 1), dest);
 			TensorPrimitives.Multiply(dest, xDiff, dest);
 			return TensorPrimitives.Sum<T>(dest) / (T.One + T.One);
 		}
