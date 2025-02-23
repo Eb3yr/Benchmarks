@@ -17,7 +17,7 @@ namespace TrapeziumRule
 		static readonly T Two = T.One + T.One;
 		static readonly T half = T.One / Two;
 
-		[Params(23, 135, 517, 1023, 2051, 65533, 1_000_003)]	// Non-powers of 4, prevent optimal case for vectors
+		[Params(23, 135, 517, 1023, 2051, 2563, 65533, 1_000_003)]	// Non-powers of 4, prevent optimal case for vectors
 		public int Length;
 
 		private static T F(T x) => x * x + T.One;
@@ -41,8 +41,8 @@ namespace TrapeziumRule
 		{
 			T result = T.Zero;
 		
-			for (int i = 0; i < x.Length - 1; i++)  // I could do this with IEnumerable because I'm just iterating each one
-				result += (y[i + 1] + y[i]) * (x[i + 1] - x[i]);  // 0.5(a+b)h
+			for (int i = 0; i < x.Length - 1; i++)
+				result += (y[i + 1] + y[i]) * (x[i + 1] - x[i]);
 		
 			return half * result;
 		}
@@ -64,7 +64,7 @@ namespace TrapeziumRule
 			return result;
 		}
 		
-		[Benchmark(Baseline = true)]
+		[Benchmark]
 		public unsafe T TrapzPtrUnrolled()
 		{
 			T result = T.Zero;
@@ -99,7 +99,7 @@ namespace TrapeziumRule
 			Span<T> xDiff = x.Length <= 2048 ? stackalloc T[x.Length - 1] : new T[x.Length - 1];
 			Span<T> _x = x;
 			Span<T> _y = y;
-
+		
 			TensorPrimitives.Subtract(_x.Slice(1, _x.Length - 1), _x.Slice(0, _x.Length - 1), xDiff);
 			TensorPrimitives.Add(_y.Slice(1, _x.Length - 1), _y.Slice(0, _x.Length - 1), dest);
 			TensorPrimitives.Multiply(dest, xDiff, dest);
@@ -109,7 +109,8 @@ namespace TrapeziumRule
 		[Benchmark]
 		public T TrapzTensorPrimitivesSlidingWindow()
 		{
-			const int stackLim = 1024;	// 2^n + 1 to keep dest, xDiff lengths powers of 2. 
+			// Avoid heap allocation by re-using a smaller stackalloc destination array
+			const int stackLim = 1024;   // 2^n + 1 to keep dest, xDiff lengths powers of 2. 
 			int remainder = x.Length;
 			T result = T.Zero;
 			int minOfLength = int.Min(x.Length - 1, stackLim);
@@ -130,7 +131,7 @@ namespace TrapeziumRule
 				remainder -= stackLim;
 			}
 
-			// We slice the destinations instead of re-allocating them, so that we don't have mismatched span lengths
+			// We slice the destinations so that the lengths all match
 			TensorPrimitives.Subtract(_x.Slice(1 + offset, remainder - 1), _x.Slice(offset, remainder - 1), xDiff.Slice(0, remainder - 1));
 			TensorPrimitives.Add(_y.Slice(1 + offset, remainder - 1), _y.Slice(offset, remainder - 1), dest.Slice(0, remainder - 1));
 			TensorPrimitives.Multiply(dest.Slice(0, remainder - 1), xDiff.Slice(0, remainder - 1), dest.Slice(0, remainder - 1));
@@ -138,7 +139,7 @@ namespace TrapeziumRule
 			return result / Two;
 		}
 
-		[Benchmark]
+		[Benchmark(Baseline = true)]
 		public unsafe T TrapzVectors()
 		{
 			T result = T.Zero;
@@ -156,7 +157,12 @@ namespace TrapeziumRule
 					vecY = Vector.Load(yPtr + i);
 					vecYPlusOne = Vector.Load(yPtr + i + 1);
 
-					result += Vector.Sum(Vector.Multiply(Vector.Add(vecY, vecYPlusOne), Vector.Subtract(vecXPlusOne, vecX)));   // This feels smelly
+					result += Vector.Sum(
+						Vector.Multiply(
+							Vector.Subtract(vecXPlusOne, vecX),
+							Vector.Add(vecY, vecYPlusOne)
+							)
+						);
 
 					remainder -= Vector<T>.Count;
 					i += Vector<T>.Count;
@@ -167,6 +173,17 @@ namespace TrapeziumRule
 			}
 
 			return result / Two;
+		}
+
+		[Benchmark]
+		public T TrapzOptimal()
+		{
+			const int threshold = 2048;
+		
+			if (Length < threshold)
+				return TrapzVectors();
+		
+			return TrapzTensorPrimitivesSlidingWindow();
 		}
 	}
 }
